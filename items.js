@@ -42,19 +42,36 @@ function ItemDAO(database) {
         * should identify the total number of documents across all categories.
         *
         */
-        
-
         var categories = [];
-        var category = {
-            _id: "All",
-            num: 9999
-        };
+                  // console.log(categories);
+        var query = [{$project: {_id:1, category:1}},
+                     {$group: {_id: "$category", num: {$sum:1}}},
+                     {$sort: {_id:1}}
+                    ];
 
-        categories.push(category)
+        var cursor = this.db.collection('item').aggregate(query);
+
+
+        cursor.toArray(function(err, docs) {
+                  assert.equal(null, err);
+                  var docNumSum = 0;
+                  
+                  docs.forEach(function (doc) {
+                    docNumSum += doc.num;
+                    var categori = { _id: doc._id, num: doc.num }
+                    categories.push(categori);
+                  });
+
+                  var category = { _id: "All", num: docNumSum  }; 
+                  categories.unshift(category);
+
+                  callback(categories);
+        });
+
 
         // TODO-lab1A Replace all code above (in this method).
         
-        callback(categories);
+        // callback(categories);
     }
 
 
@@ -74,15 +91,39 @@ function ItemDAO(database) {
          *
          */
 
+        // var pageItem = this.createDummyItem();
+        // var pageItems = [];
+        // for (var i=0; i<5; i++) {
+        //     pageItems.push(pageItem);
+        // }
         var pageItem = this.createDummyItem();
         var pageItems = [];
+        
         for (var i=0; i<5; i++) {
             pageItems.push(pageItem);
         }
 
+        var toSkip = page * itemsPerPage; 
+        // console.log(toSkip);
+        // console.log(itemsPerPage);
+        // console.log(category);
+        // console.log(page);
+        var query = {category: category};
+
+        if ( category === "All") {
+            query = {};
+        }
+        var cursor = this.db.collection('item').find(query).skip(toSkip).limit(itemsPerPage);
+
+        cursor.toArray(function(err, pageItems){
+            assert.equal(null, err);
+            // console.log("\n\n DEbug: data " + pageItems);
+            callback(pageItems);
+        }) 
+
+        // console.log(cursor);
         // TODO-lab1B Replace all code above (in this method).
 
-        callback(pageItems);
     }
 
 
@@ -102,8 +143,20 @@ function ItemDAO(database) {
          * getNumItems() method.
          *
          */
+        // this.db.collection('item').find().count().then(function(count){ console.log(count); 
+        //     //  callback(count);
+        // });
+        var query = { category: category };
         
-        callback(numItems);
+        if ( category === "All") {
+            query = {};
+        }
+        this.db.collection('item').find(query).count().then(function(count){ 
+                                                           console.log(count);
+                                                           callback(count);
+                                                       });
+
+        // callback(numItems);
     }
 
 
